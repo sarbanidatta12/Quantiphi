@@ -1,4 +1,4 @@
-folder_path: "C:\\Users\\SDatta\\OneDrive - Danaher\\Documents\\Quantiphi\\assignment\\data"
+folder_path: "C:\\Users\\SDatta\\Documents\\Quantiphi\\assignment\\data"
 device: "cpu"
 embed_model: "sentence-transformers/all-MiniLM-L6-v2"
 users:
