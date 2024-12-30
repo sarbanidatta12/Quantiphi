@@ -1,0 +1,18 @@
+folder_path: "C:\\Users\\SDatta\\OneDrive - Danaher\\Documents\\Quantiphi\\assignment\\data"
+device: "cpu"
+embed_model: "sentence-transformers/all-MiniLM-L6-v2"
+users:
+  alice:
+    email: "alice@email.com"
+    folders:
+      - "META"
+  bob:
+    email: "bob@email.com"
+    folders:
+      - "JPMorgan"
+      - "Citigroup"
+  charlie:
+    email: "charlie@email.com"
+    folders:
+      - "Home Bancorp"
+      - "Selective Insurance"
