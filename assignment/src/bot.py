@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 from langchain_openai import AzureChatOpenAI
-from langchain_huggingface import HuggingFaceEmbeddings  # Updated import
-from langchain.chains import create_history_aware_retriever, create_retrieval_chain
+from langchain_huggingface import HuggingFaceEmbeddings  
+from langchain.chains import create_retrieval_chain
 from langchain_chroma import Chroma
 from langchain.chains.combine_documents import create_stuff_documents_chain 
 from langchain.prompts import (
@@ -28,11 +28,11 @@ def get_prompt(system_message):
         ChatPromptTemplate: The chat prompt template.
     """
     prompt = ChatPromptTemplate(
-        input_variables=['context', 'input'],  # Include 'context' here
+        input_variables=['context', 'input'],  
         messages=[
             SystemMessagePromptTemplate(
                 prompt=PromptTemplate(
-                    input_variables=['context', 'input'],  # Update to include 'context'
+                    input_variables=['context', 'input'],  
                     template=system_message,
                     template_format='f-string',
                     validate_template=True
@@ -62,7 +62,7 @@ def make_chain(organization_names):
     Returns:
         RetrievalChain: The retrieval chain for answering queries.
     """
-    # Initialize the AzureChatOpenAI model
+    
     model = AzureChatOpenAI(
         api_key=os.getenv("AZURE_OPENAI_KEY1"),
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT1"),
@@ -70,63 +70,49 @@ def make_chain(organization_names):
         openai_api_version=os.getenv("OPENAI_API_VERSION"),
         temperature=0.1
     )
-
-    # Read configuration file
-    config_file_path = Path(__file__).parent / 'config.yaml'
-    config = read_config(config_file_path)
     
-    # Set base data path and vectorstore paths
+    config_file_path = Path(__file__).parent / 'config.yaml'
+    config = read_config(config_file_path)    
+    
     base_data_path = Path(config['folder_path']) / 'vectorstore'
     vectorstore_paths = [base_data_path / org for org in organization_names]
-
-    # Set device for embeddings (CPU or GPU)
-    device = config.get("device", "cpu")
     
-    # Initialize embeddings model
-    embeddings = HuggingFaceEmbeddings(model_name=config.get("embed_model"), model_kwargs={'device': device})
-
-    # Initialize vector stores
-    vector_stores = [Chroma(persist_directory=str(path), embedding_function=embeddings) for path in vectorstore_paths]
-    
-    # Generate system message and prompt
+    device = config.get("device", "cpu")        
+    embeddings = HuggingFaceEmbeddings(model_name=config.get("embed_model"), model_kwargs={'device': device})    
+    vector_stores = [Chroma(persist_directory=str(path), embedding_function=embeddings) for path in vectorstore_paths]       
     system_message = generate_system_message(organization_names)
     prompt = get_prompt(system_message)   
 
     class CombinedRetriever(BaseRetriever):
         def __init__(self, retrievers):
-            super().__init__()  # Ensure proper initialization of the parent class
-            self._retrievers = retrievers  # Use a private field to avoid conflicts
+            super().__init__()  
+            self._retrievers = retrievers 
         
         def get_relevant_documents(self, query):
             results = []
-            for retriever in self._retrievers:  # Use the private field here
+            for retriever in self._retrievers: 
                 results.extend(retriever.get_relevant_documents(query))
             return results
 
-        async def aget_relevant_documents(self, query):  # For async compatibility
+        async def aget_relevant_documents(self, query):  
             results = []
             for retriever in self._retrievers:
                 results.extend(await retriever.aget_relevant_documents(query))
             return results
         
         def with_config(self, config=None, **kwargs):
-            return self
+            return self    
     
+    retrievers = [vector_store.as_retriever(search_type="similarity", verbose=True, k=10) for vector_store in vector_stores]        
+    combined_retriever = CombinedRetriever(retrievers)  
+    combine_docs_chain = create_stuff_documents_chain(llm=model, prompt=prompt)        
     
-    retrievers = [vector_store.as_retriever(search_type="similarity", verbose=True, k=10) for vector_store in vector_stores]
-    
-    # Initialize combined retriever
-    combined_retriever = CombinedRetriever(retrievers)
-    
-    # Create document combination chain
-    combine_docs_chain = create_stuff_documents_chain(llm=model, prompt=prompt)    
-    
-    # Create retrieval chain using the combined retriever
     chain = create_retrieval_chain(
         retriever=combined_retriever,
         combine_docs_chain=combine_docs_chain
     )
     return chain
+
 
 def get_response(question, organization_names):
     """
@@ -148,6 +134,7 @@ def get_response(question, organization_names):
                          
     response = chain.invoke({"input": input_text})   
     return response['answer']
+
 
 # Example usage
 if __name__ == "__main__":

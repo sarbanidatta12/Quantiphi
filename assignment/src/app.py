@@ -4,7 +4,7 @@ from utils import get_user
 from bot import get_response
 
 
-# Initialize session state
+# session state
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
     st.session_state["user_folders"] = []
